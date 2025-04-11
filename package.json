@@ -3,8 +3,12 @@
   "version": "0.1.0",
   "description": "TypeScript SDK for Chainos workflow tool",
   "repository": "https://github.com/chainos-io/chainos-javascript.git",
+  "main": "dist/index.js",
+  "module": "dist/index.mjs",
+  "types": "dist/index.d.ts",
+  "files": ["dist", "README.md"],
   "scripts": {
-    "build": "tsc",
+    "build": "tsup",
     "clean": "rimraf dist",
     "lint": "biome lint src",
     "format": "biome format --write src",
@@ -12,6 +16,14 @@
     "prepublishOnly": "yarn clean && yarn build",
     "test": "jest",
     "docs": "typedoc --out docs src"
+  },
+  "tsup": {
+    "entry": ["src/index.ts"],
+    "format": ["cjs", "esm"],
+    "dts": true,
+    "splitting": false,
+    "sourcemap": true,
+    "clean": true
   },
   "devDependencies": {
     "@biomejs/biome": "^1.9.4",
@@ -21,6 +33,7 @@
     "rimraf": "^5.0.5",
     "ts-jest": "^29.1.2",
     "ts-node": "^10.9.2",
+    "tsup": "^8.4.0",
     "typedoc": "^0.25.12",
     "typescript": "^5.8.3"
   },
