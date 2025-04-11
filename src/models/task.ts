@@ -64,37 +64,37 @@ export class Task {
   /**
    * Unique identifier for the task
    */
-  id: string;
+  private _id: string;
 
   /**
    * Display name of the task
    */
-  name: string;
+  private _name: string;
 
   /**
    * Filepath of the task implementation
    */
-  filepath: string;
+  private _filepath: string;
 
   /**
    * Main function or entry point for the task
    */
-  main: string;
+  private _main: string;
 
   /**
    * Environment information for the task
    */
-  environment: EnvironmentConfig;
+  private _environment: EnvironmentConfig;
 
   /**
    * CPU allocation for the task (in increments of 0.25, minimum 0.25)
    */
-  cpu: number;
+  private _cpu: number;
 
   /**
    * Memory allocation for the task (in format like "512mb" or "2gb")
    */
-  memory: string;
+  private _memory: string;
 
   /**
    * Create a new Task
@@ -107,27 +107,76 @@ export class Task {
    * @param options.memory Memory allocation in format like "512mb" or "2gb"
    */
   constructor(id: string, filepath: string, options: TaskOptions = {}) {
-    this.id = id;
-    this.filepath = filepath;
-    this.name = options.displayName || filepath;
-    this.main = options.entryFunctionName || 'main';
-    this.environment = this.detectEnvironment();
+    this._id = id;
+    this._filepath = filepath;
+    this._name = options.displayName || filepath;
+    this._main = options.entryFunctionName || 'main';
+    this._environment = this.detectEnvironment();
 
     // Validate and set CPU
     if (options.cpu !== undefined) {
       // Ensure CPU is at least 0.25 and in increments of 0.25
-      const normalizedCpu = Math.max(0.25, Math.round(options.cpu * 4) / 4);
-      this.cpu = normalizedCpu;
+      const normalizedCpu = Math.max(0.25, Math.ceil(options.cpu * 4) / 4);
+      this._cpu = normalizedCpu;
     } else {
-      this.cpu = 0.25; // Default to minimum
+      this._cpu = 0.25; // Default to minimum
     }
 
     // Validate and set memory
     if (options.memory !== undefined) {
-      this.memory = this.normalizeMemory(options.memory);
+      this._memory = this.normalizeMemory(options.memory);
     } else {
-      this.memory = '1gb'; // Default value
+      this._memory = '1gb'; // Default value
     }
+  }
+
+  /**
+   * Get the task's ID
+   */
+  get id(): string {
+    return this._id;
+  }
+
+  /**
+   * Get the task's display name
+   */
+  get name(): string {
+    return this._name;
+  }
+
+  /**
+   * Get the task's filepath
+   */
+  get filepath(): string {
+    return this._filepath;
+  }
+
+  /**
+   * Get the task's main function name
+   */
+  get main(): string {
+    return this._main;
+  }
+
+  /**
+   * Get the task's environment configuration
+   */
+  get environment(): EnvironmentConfig {
+    return this._environment;
+  }
+
+  /**
+   * Get the task's CPU allocation
+   */
+  get cpu(): number {
+    return this._cpu;
+  }
+
+  /**
+   * Get the task's memory allocation
+   */
+  get memory(): string {
+    return this._memory;
   }
 
   /**
@@ -161,15 +210,8 @@ export class Task {
     }
 
     // Normalize to increments of 256MB
-    const normalizedMb = Math.max(256, Math.round(valueInMb / 256) * 256);
+    const normalizedMb = Math.max(256, Math.ceil(valueInMb / 256) * 256);
 
-    // Convert back to most appropriate unit (TB, GB, or MB)
-    if (normalizedMb >= 1024 * 1024 && normalizedMb % (1024 * 1024) === 0) {
-      return `${normalizedMb / (1024 * 1024)}tb`;
-    }
-    if (normalizedMb >= 1024 && normalizedMb % 1024 === 0) {
-      return `${normalizedMb / 1024}gb`;
-    }
     return `${normalizedMb}mb`;
   }
 
@@ -179,8 +221,8 @@ export class Task {
    * @returns The detected environment configuration
    */
   private detectEnvironment(): EnvironmentConfig {
-    const dirPath = path.dirname(this.filepath);
-    const extension = path.extname(this.filepath).toLowerCase();
+    const dirPath = path.dirname(this._filepath);
+    const extension = path.extname(this._filepath).toLowerCase();
 
     // Default environment configuration
     const envConfig: EnvironmentConfig = {
@@ -271,7 +313,7 @@ export class Task {
    * @returns The task's environment type
    */
   getEnvironmentType(): TaskEnvironment {
-    return this.environment.type;
+    return this._environment.type;
   }
 
   /**
@@ -280,7 +322,7 @@ export class Task {
    * @returns The path to the environment configuration file
    */
   getConfigPath(): string | undefined {
-    return this.environment.configPath;
+    return this._environment.configPath;
   }
 
   /**
@@ -289,6 +331,6 @@ export class Task {
    * @returns The environment configuration data
    */
   getConfig(): any {
-    return this.environment.config;
+    return this._environment.config;
   }
 }

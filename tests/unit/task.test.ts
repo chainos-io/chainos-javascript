@@ -15,6 +15,64 @@ const cleanupTestFile = (filePath: string) => {
   }
 };
 
+describe('Task Creation and Validation', () => {
+  test('should create a task with default options', () => {
+    const task = new Task('default-task', '/path/to/task.js');
+
+    expect(task.id).toBe('default-task');
+    expect(task.filepath).toBe('/path/to/task.js');
+    expect(task.name).toBe('/path/to/task.js'); // Default name is filepath
+    expect(task.main).toBe('main'); // Default entry function
+    expect(task.cpu).toBe(0.25); // Default CPU
+    expect(task.memory).toBe('1gb'); // Default memory
+  });
+
+  test('should create a task with custom options', () => {
+    const task = new Task('custom-task', '/path/to/task.js', {
+      displayName: 'Custom Task',
+      entryFunctionName: 'run',
+      cpu: 0.75,
+      memory: '2gb',
+    });
+
+    expect(task.id).toBe('custom-task');
+    expect(task.name).toBe('Custom Task');
+    expect(task.main).toBe('run');
+    expect(task.cpu).toBe(0.75);
+    expect(task.memory).toBe('2048mb'); // Updated to expect MB format
+  });
+
+  test('should throw error when attempting to modify immutable task properties', () => {
+    // Note: Changed test to verify that properties are truly immutable
+    const task = new Task('immutable-task', '/path/to/task.js', {
+      displayName: 'Immutable Task',
+      cpu: 0.5,
+      memory: '1gb',
+    });
+
+    // Try to modify task properties - expect errors
+    expect(() => {
+      // @ts-ignore - intentionally trying to modify properties
+      task.id = 'modified-id';
+    }).toThrow();
+
+    expect(() => {
+      // @ts-ignore
+      task.name = 'Modified Name';
+    }).toThrow();
+
+    expect(() => {
+      // @ts-ignore
+      task.filepath = '/modified/path';
+    }).toThrow();
+
+    expect(() => {
+      // @ts-ignore
+      task.cpu = 1.0;
+    }).toThrow();
+  });
+});
+
 describe('Task Environment Detection', () => {
   test('should detect JavaScript environment from .js file', () => {
     // Use a path from the current project structure
@@ -202,41 +260,52 @@ describe('Task Resource Configuration', () => {
 
   test('should normalize CPU values to increments of 0.25', () => {
     const task1 = new Task('cpu-task-1', '/path/to/task.js', { cpu: 0.3 });
-    expect(task1.cpu).toBe(0.25);
+    expect(task1.cpu).toBe(0.5); // Updated: 0.3 rounded up to 0.5 using Math.ceil
 
     const task2 = new Task('cpu-task-2', '/path/to/task.js', { cpu: 0.6 });
-    expect(task2.cpu).toBe(0.5);
+    expect(task2.cpu).toBe(0.75); // Updated: 0.6 rounded up to 0.75 using Math.ceil
 
     const task3 = new Task('cpu-task-3', '/path/to/task.js', { cpu: 1.7 });
-    expect(task3.cpu).toBe(1.75);
+    expect(task3.cpu).toBe(1.75); // 1.7 rounded up to 1.75
 
     const task4 = new Task('cpu-task-4', '/path/to/task.js', { cpu: 0.1 });
     expect(task4.cpu).toBe(0.25); // Minimum value
   });
 
+  test('should allow arbitrary CPU values above minimum', () => {
+    const task1 = new Task('high-cpu-task-1', '/path/to/task.js', { cpu: 5.0 });
+    expect(task1.cpu).toBe(5.0); // Should not be capped
+
+    const task2 = new Task('high-cpu-task-2', '/path/to/task.js', { cpu: 8.75 });
+    expect(task2.cpu).toBe(8.75); // Should not be capped
+
+    const task3 = new Task('high-cpu-task-3', '/path/to/task.js', { cpu: 16.0 });
+    expect(task3.cpu).toBe(16.0); // Should not be capped
+  });
+
   test('should normalize memory values to increments of 256MB', () => {
     const task1 = new Task('mem-task-1', '/path/to/task.js', { memory: '300mb' });
-    expect(task1.memory).toBe('256mb');
+    expect(task1.memory).toBe('512mb'); // Updated: 300mb rounded up to 512mb using Math.ceil
 
     const task2 = new Task('mem-task-2', '/path/to/task.js', { memory: '400mb' });
     expect(task2.memory).toBe('512mb');
 
     const task3 = new Task('mem-task-3', '/path/to/task.js', { memory: '1.1gb' });
-    expect(task3.memory).toBe('1gb');
+    expect(task3.memory).toBe('1280mb'); // Updated: 1.1gb (1126.4mb) rounded up to 1280mb
 
     const task4 = new Task('mem-task-4', '/path/to/task.js', { memory: '1.7gb' });
-    expect(task4.memory).toBe('1792mb'); // Updated to match actual implementation
+    expect(task4.memory).toBe('1792mb');
   });
 
   test('should handle TB memory values', () => {
     const task1 = new Task('tb-task-1', '/path/to/task.js', { memory: '1tb' });
-    expect(task1.memory).toBe('1tb');
+    expect(task1.memory).toBe('1048576mb'); // 1TB = 1,048,576MB
 
     const task2 = new Task('tb-task-2', '/path/to/task.js', { memory: '1.1tb' });
-    expect(task2.memory).toBe('1.1tb');
+    expect(task2.memory).toBe('1153536mb'); // 1.1TB = 1,153,536MB (ceiling to nearest 256MB)
 
     const task3 = new Task('tb-task-3', '/path/to/task.js', { memory: '1.5tb' });
-    expect(task3.memory).toBe('1.5tb');
+    expect(task3.memory).toBe('1572864mb'); // 1.5TB = 1,572,864MB
   });
 
   test('should handle invalid memory format', () => {
@@ -245,6 +314,20 @@ describe('Task Resource Configuration', () => {
 
     const task2 = new Task('invalid-mem-task-2', '/path/to/task.js', { memory: '100' });
     expect(task2.memory).toBe('256mb'); // Default
+  });
+
+  test('should handle edge case memory values', () => {
+    // Very small memory value
+    const taskSmall = new Task('small-mem-task', '/path/to/task.js', { memory: '10mb' });
+    expect(taskSmall.memory).toBe('256mb'); // Minimum value
+
+    // Zero memory value
+    const taskZero = new Task('zero-mem-task', '/path/to/task.js', { memory: '0mb' });
+    expect(taskZero.memory).toBe('256mb'); // Minimum value
+
+    // Negative memory value (invalid)
+    const taskNegative = new Task('negative-mem-task', '/path/to/task.js', { memory: '-1gb' });
+    expect(taskNegative.memory).toBe('256mb'); // Falls back to default/minimum
   });
 });
 
@@ -263,5 +346,39 @@ describe('Task ID Configuration', () => {
     const idWithSpecialChars = 'task-with-special_chars!@#';
     const taskWithSpecialChars = new Task(idWithSpecialChars, '/path/to/task.js');
     expect(taskWithSpecialChars.id).toBe(idWithSpecialChars);
+  });
+});
+
+describe('Task Public API Methods', () => {
+  test('should expose getEnvironmentType method', () => {
+    const task = new Task('api-task', '/path/to/task.js');
+    expect(typeof task.getEnvironmentType).toBe('function');
+    expect(task.getEnvironmentType()).toBe(TaskEnvironment.UNKNOWN);
+  });
+
+  test('should expose getConfigPath method', () => {
+    const task = new Task('api-task', '/path/to/task.js');
+    expect(typeof task.getConfigPath).toBe('function');
+    expect(task.getConfigPath()).toBeUndefined();
+  });
+
+  test('should expose getConfig method', () => {
+    const task = new Task('api-task', '/path/to/task.js');
+    expect(typeof task.getConfig).toBe('function');
+    expect(task.getConfig()).toBeUndefined();
+  });
+
+  test('should have consistent behavior with real and mocked file paths', () => {
+    // Test with a real file path that exists
+    const realFile = path.resolve(__dirname, '../../src/index.ts');
+    const realTask = new Task('real-file-task', realFile);
+
+    // Test with a non-existent path
+    const fakePath = '/non/existent/path/task.js';
+    const fakeTask = new Task('fake-path-task', fakePath);
+
+    // Both should be valid tasks with different environment types
+    expect(realTask.getEnvironmentType()).toBe(TaskEnvironment.TYPESCRIPT);
+    expect(fakeTask.getEnvironmentType()).toBe(TaskEnvironment.UNKNOWN);
   });
 });
