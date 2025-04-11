@@ -64,30 +64,8 @@ chain.register({
 chain.setEntryPoint('processing-step');
 
 // Compile the chain to JSON
-const json = chain.compile({ materializeFunctions: true });
+const json = chain.compile();
 console.log(JSON.stringify(json, null, 2));
-```
-
-### Using API Client
-
-```typescript
-import { ChainosClient } from 'chainos-sdk';
-
-// Initialize the client with your API key
-const client = new ChainosClient({
-  apiKey: 'your-api-key'
-});
-
-// Example: Get account information
-async function getAccountInfo() {
-  try {
-    const account = await client.getAccount();
-    console.log('Account info:', account);
-    return account;
-  } catch (error) {
-    console.error('Error getting account info:', error.message);
-  }
-}
 ```
 
 ## Core Concepts
@@ -223,7 +201,6 @@ Check out the examples directory for complete working samples:
 - Basic workflow with JavaScript, TypeScript, and Python tasks
 - Advanced preprocessing and postprocessing
 - Error handling patterns
-- API client usage
 
 ## Development
 
