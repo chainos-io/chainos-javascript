@@ -1,38 +1,88 @@
 /**
- * Common types used throughout the Chainos SDK
+ * Core models for the Chainos SDK
  */
 
 /**
- * Pagination metadata for list responses
+ * Chain status enum
  */
-export interface PaginationMeta {
-  /**
-   * Total number of items available
-   */
-  total: number;
-
-  /**
-   * Current page number
-   */
-  page: number;
-
-  /**
-   * Number of items per page
-   */
-  limit: number;
-
-  /**
-   * Whether there are more pages
-   */
-  hasMore: boolean;
+export enum WorkflowStatus {
+  DRAFT = 'draft',
+  ACTIVE = 'active',
+  PAUSED = 'paused',
+  ARCHIVED = 'archived',
 }
 
 /**
- * Standard pagination parameters for list requests
+ * Interface for Chain API responses
+ */
+export interface ChainResponse {
+  /**
+   * Unique identifier for the chain
+   */
+  id: string;
+
+  /**
+   * Name of the chain
+   */
+  name: string;
+
+  /**
+   * Description of the chain
+   */
+  description?: string;
+
+  /**
+   * Current status of the chain
+   */
+  status: WorkflowStatus;
+
+  /**
+   * When the chain was created
+   */
+  createdAt: string;
+
+  /**
+   * When the chain was last updated
+   */
+  updatedAt: string;
+
+  /**
+   * Tasks in the chain
+   */
+  tasks: TaskResponse[];
+}
+
+/**
+ * Interface for Task API responses
+ */
+export interface TaskResponse {
+  /**
+   * Unique identifier for the task
+   */
+  id: string;
+
+  /**
+   * Name of the task
+   */
+  name: string;
+
+  /**
+   * Filepath of the task implementation
+   */
+  filepath: string;
+
+  /**
+   * Main function or entry point for the task
+   */
+  main: string;
+}
+
+/**
+ * Pagination parameters for API requests
  */
 export interface PaginationParams {
   /**
-   * Page number to retrieve
+   * Page number (1-based)
    */
   page?: number;
 
@@ -43,31 +93,36 @@ export interface PaginationParams {
 }
 
 /**
- * Standard response for paginated list endpoints
+ * Generic paginated response from API
  */
 export interface PaginatedResponse<T> {
   /**
-   * List of items
+   * Data items
    */
   data: T[];
 
   /**
    * Pagination metadata
    */
-  meta: PaginationMeta;
-}
+  meta: {
+    /**
+     * Total count of items
+     */
+    total: number;
 
-/**
- * Standard response wrapper
- */
-export interface ApiResponse<T> {
-  /**
-   * Response data
-   */
-  data: T;
+    /**
+     * Current page number
+     */
+    page: number;
 
-  /**
-   * Response metadata
-   */
-  meta?: Record<string, any>;
+    /**
+     * Number of items per page
+     */
+    limit: number;
+
+    /**
+     * Whether there are more pages
+     */
+    hasMore: boolean;
+  };
 }
