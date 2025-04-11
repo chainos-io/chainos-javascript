@@ -1,5 +1,41 @@
-import { WorkflowStatus } from './types';
 import type { Task } from './task';
+
+/**
+ * Type definition for the processor function
+ */
+export type ProcessorFunction = (input: any, context: string) => any;
+
+/**
+ * Represents a registry entry in a Chain
+ */
+export interface ChainRegistryEntry {
+  /**
+   * User-defined identifier for the registry entry
+   */
+  id: string;
+
+  /**
+   * Optional task associated with this registry entry
+   */
+  task?: Task;
+
+  /**
+   * Optional marketplace identifier
+   */
+  marketplaceId?: string;
+
+  /**
+   * Optional preprocessing function or task
+   * Executes before the task runs
+   */
+  preprocessing?: ProcessorFunction | Task;
+
+  /**
+   * Optional postprocessing function or task
+   * Executes after the task completes
+   */
+  postprocessing?: ProcessorFunction | Task;
+}
 
 /**
  * Represents a Chain of tasks in the Chainos system
@@ -16,91 +52,36 @@ export class Chain {
   name?: string;
 
   /**
-   * Description of the chain
+   * Registry of items in the chain
    */
-  description?: string;
+  registry: Map<string, ChainRegistryEntry>;
 
   /**
-   * Current status of the chain
+   * Context for the chain
    */
-  status: WorkflowStatus;
-
-  /**
-   * When the chain was created
-   */
-  createdAt: string;
-
-  /**
-   * When the chain was last updated
-   */
-  updatedAt: string;
-
-  /**
-   * Tasks in the chain
-   */
-  private tasks: Map<string, Task>;
+  contextJSON: string;
 
   /**
    * Create a new Chain
    *
    * @param id Unique identifier for the chain
+   * @param name Optional name for the chain
    */
-  constructor(id: string) {
+  constructor(id: string, name?: string) {
     this.id = id;
-    this.status = WorkflowStatus.DRAFT;
-    this.createdAt = new Date().toISOString();
-    this.updatedAt = this.createdAt;
-    this.tasks = new Map();
+    this.name = name;
+    this.registry = new Map<string, ChainRegistryEntry>();
+    this.contextJSON = '{}';
   }
 
   /**
-   * Register a task to the chain
+   * Add an entry to the chain registry
    *
-   * @param id Unique identifier for the task
-   * @param name Name of the task
-   * @param task Task object
-   * @returns The chain instance for chaining
+   * @param entry The registry entry to add
+   * @returns The Chain instance for method chaining
    */
-  register(id: string, name: string, task: Task): Chain {
-    if (this.tasks.has(id)) {
-      throw new Error(`Task with id ${id} already exists in the chain`);
-    }
-
-    this.tasks.set(id, task);
-    this.updatedAt = new Date().toISOString();
+  register(entry: ChainRegistryEntry): Chain {
+    this.registry.set(entry.id, entry);
     return this;
-  }
-
-  /**
-   * Get all tasks in the chain
-   *
-   * @returns An array of tasks
-   */
-  getTasks(): Task[] {
-    return Array.from(this.tasks.values());
-  }
-
-  /**
-   * Get a task by its id
-   *
-   * @param id Task id
-   * @returns The task or undefined if not found
-   */
-  getTask(id: string): Task | undefined {
-    return this.tasks.get(id);
-  }
-
-  /**
-   * Remove a task from the chain
-   *
-   * @param id Task id
-   * @returns true if the task was removed, false otherwise
-   */
-  removeTask(id: string): boolean {
-    const result = this.tasks.delete(id);
-    if (result) {
-      this.updatedAt = new Date().toISOString();
-    }
-    return result;
   }
 }

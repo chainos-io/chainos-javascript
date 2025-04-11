@@ -1,4 +1,3 @@
-import crypto from 'node:crypto';
 import path from 'node:path';
 import fs from 'node:fs';
 
@@ -45,6 +44,17 @@ export interface TaskOptions {
    * Entry function or main point for the task
    */
   entryFunctionName?: string;
+
+  /**
+   * CPU allocation for the task in increments of 0.25 (minimum: 0.25)
+   */
+  cpu?: number;
+
+  /**
+   * Memory allocation for the task in format like "512mb", "2gb", or "1tb"
+   * Operates in increments of 256mb
+   */
+  memory?: string;
 }
 
 /**
@@ -77,19 +87,90 @@ export class Task {
   environment: EnvironmentConfig;
 
   /**
+   * CPU allocation for the task (in increments of 0.25, minimum 0.25)
+   */
+  cpu: number;
+
+  /**
+   * Memory allocation for the task (in format like "512mb" or "2gb")
+   */
+  memory: string;
+
+  /**
    * Create a new Task
    *
    * @param filepath Filepath of the task implementation
    * @param options Optional configuration for the task
    * @param options.displayName Display name for the task (defaults to filepath)
    * @param options.entryFunctionName Entry function name (defaults to "main")
+   * @param options.cpu CPU allocation in increments of 0.25 (minimum: 0.25)
+   * @param options.memory Memory allocation in format like "512mb" or "2gb"
    */
-  constructor(filepath: string, options: TaskOptions = {}) {
-    this.id = crypto.randomUUID();
+  constructor(id: string, filepath: string, options: TaskOptions = {}) {
+    this.id = id;
     this.filepath = filepath;
     this.name = options.displayName || filepath;
     this.main = options.entryFunctionName || 'main';
     this.environment = this.detectEnvironment();
+
+    // Validate and set CPU
+    if (options.cpu !== undefined) {
+      // Ensure CPU is at least 0.25 and in increments of 0.25
+      const normalizedCpu = Math.max(0.25, Math.round(options.cpu * 4) / 4);
+      this.cpu = normalizedCpu;
+    } else {
+      this.cpu = 0.25; // Default to minimum
+    }
+
+    // Validate and set memory
+    if (options.memory !== undefined) {
+      this.memory = this.normalizeMemory(options.memory);
+    } else {
+      this.memory = '1gb'; // Default value
+    }
+  }
+
+  /**
+   * Normalize memory string to ensure it follows the correct format
+   * and uses increments of 256MB
+   *
+   * @param memory Memory string (e.g., "512mb", "2gb", "1tb")
+   * @returns Normalized memory string
+   */
+  private normalizeMemory(memory: string): string {
+    // Convert to lowercase for consistent parsing
+    const lowerMemory = memory.toLowerCase();
+
+    // Extract value and unit
+    const match = lowerMemory.match(/^(\d+(\.\d+)?)([mgt]b)$/);
+    if (!match) {
+      return '256mb'; // Default if format is invalid
+    }
+
+    const value = Number.parseFloat(match[1]);
+    const unit = match[3];
+
+    // Convert to MB for normalization
+    let valueInMb: number;
+    if (unit === 'tb') {
+      valueInMb = value * 1024 * 1024; // TB to MB
+    } else if (unit === 'gb') {
+      valueInMb = value * 1024; // GB to MB
+    } else {
+      valueInMb = value; // Already in MB
+    }
+
+    // Normalize to increments of 256MB
+    const normalizedMb = Math.max(256, Math.round(valueInMb / 256) * 256);
+
+    // Convert back to most appropriate unit (TB, GB, or MB)
+    if (normalizedMb >= 1024 * 1024 && normalizedMb % (1024 * 1024) === 0) {
+      return `${normalizedMb / (1024 * 1024)}tb`;
+    }
+    if (normalizedMb >= 1024 && normalizedMb % 1024 === 0) {
+      return `${normalizedMb / 1024}gb`;
+    }
+    return `${normalizedMb}mb`;
   }
 
   /**
@@ -209,156 +290,5 @@ export class Task {
    */
   getConfig(): any {
     return this.environment.config;
-  }
-
-  /**
-   * Run the task with provided inputs
-   *
-   * @param inputs Data to pass to the task function
-   * @returns Promise with the task execution result
-   * @throws Error if the task cannot be executed
-   */
-  async run(inputs: any = {}): Promise<any> {
-    if (!fs.existsSync(this.filepath)) {
-      throw new Error(`Task file not found: ${this.filepath}`);
-    }
-
-    switch (this.environment.type) {
-      case TaskEnvironment.JAVASCRIPT:
-      case TaskEnvironment.TYPESCRIPT:
-        return this.runJsTask(inputs);
-
-      case TaskEnvironment.PYTHON:
-        return this.runPythonTask(inputs);
-
-      default:
-        throw new Error(`Unsupported task environment: ${this.environment.type}`);
-    }
-  }
-
-  /**
-   * Run a JavaScript/TypeScript task
-   *
-   * @param inputs Data to pass to the task function
-   * @returns Promise with the task execution result
-   * @throws Error if the function cannot be executed
-   */
-  private async runJsTask(inputs: any): Promise<any> {
-    try {
-      // Import the module (will work for both JS and TS when TS is transpiled)
-      const moduleImport = await import(this.filepath);
-
-      // Check if the specified function exists
-      if (typeof moduleImport[this.main] !== 'function') {
-        throw new Error(`Function '${this.main}' not found in module '${this.filepath}'`);
-      }
-
-      // Execute the function
-      return await moduleImport[this.main](inputs);
-    } catch (error) {
-      if (error instanceof Error) {
-        throw new Error(`Error executing task '${this.name}': ${error.message}`);
-      }
-      throw error;
-    }
-  }
-
-  /**
-   * Run a Python task using child_process
-   *
-   * @param inputs Data to pass to the task function
-   * @returns Promise with the task execution result
-   * @throws Error if the function cannot be executed
-   */
-  private async runPythonTask(inputs: any): Promise<any> {
-    const { exec } = await import('node:child_process');
-
-    return new Promise((resolve, reject) => {
-      // Create a temporary file to store the inputs
-      const tempInputFile = path.join(path.dirname(this.filepath), `temp_input_${this.id}.json`);
-
-      // Create a temporary file to store the outputs
-      const tempOutputFile = path.join(path.dirname(this.filepath), `temp_output_${this.id}.json`);
-
-      try {
-        // Write inputs to the temporary file
-        fs.writeFileSync(tempInputFile, JSON.stringify(inputs));
-
-        // Build the Python command to execute the function
-        const pythonCommand = `python -c "
-import json
-import importlib.util
-import sys
-import os
-
-# Load input
-with open('${tempInputFile.replace(/\\/g, '\\\\')}', 'r') as f:
-    inputs = json.load(f)
-
-# Import the module
-spec = importlib.util.spec_from_file_location('module', '${this.filepath.replace(/\\/g, '\\\\')}')
-module = importlib.util.module_from_spec(spec)
-spec.loader.exec_module(module)
-
-# Check if function exists
-if not hasattr(module, '${this.main}'):
-    sys.stderr.write('Function \\'${this.main}\\' not found in module')
-    sys.exit(1)
-
-# Execute function
-result = module.${this.main}(inputs)
-
-# Write result to output file
-with open('${tempOutputFile.replace(/\\/g, '\\\\')}', 'w') as f:
-    json.dump(result, f)
-"`;
-
-        // Execute the Python command
-        exec(pythonCommand, (error, stdout, stderr) => {
-          try {
-            // Clean up the temporary input file
-            if (fs.existsSync(tempInputFile)) {
-              fs.unlinkSync(tempInputFile);
-            }
-
-            if (error) {
-              reject(new Error(`Error executing Python task: ${stderr || error.message}`));
-              return;
-            }
-
-            if (stderr) {
-              reject(new Error(`Error in Python task: ${stderr}`));
-              return;
-            }
-
-            // Check if output file exists
-            if (!fs.existsSync(tempOutputFile)) {
-              reject(new Error('Python task did not produce an output file'));
-              return;
-            }
-
-            // Read and parse the output
-            const output = JSON.parse(fs.readFileSync(tempOutputFile, 'utf8'));
-
-            // Clean up the temporary output file
-            fs.unlinkSync(tempOutputFile);
-
-            resolve(output);
-          } catch (cleanupError: any) {
-            reject(new Error(`Error processing Python task results: ${cleanupError.message}`));
-          }
-        });
-      } catch (error: any) {
-        // Clean up temporary files if they exist
-        if (fs.existsSync(tempInputFile)) {
-          fs.unlinkSync(tempInputFile);
-        }
-        if (fs.existsSync(tempOutputFile)) {
-          fs.unlinkSync(tempOutputFile);
-        }
-
-        reject(new Error(`Error setting up Python task: ${error.message}`));
-      }
-    });
   }
 }

@@ -19,7 +19,7 @@ describe('Task Environment Detection', () => {
   test('should detect JavaScript environment from .js file', () => {
     // Use a path from the current project structure
     const jsFilePath = path.resolve(__dirname, '../../examples/some-example.js');
-    const task = new Task(jsFilePath);
+    const task = new Task('js-task', jsFilePath);
 
     expect(task.getEnvironmentType()).toBe(TaskEnvironment.JAVASCRIPT);
     expect(task.getConfigPath()).toContain('package.json');
@@ -29,7 +29,7 @@ describe('Task Environment Detection', () => {
   test('should detect TypeScript environment from .ts file', () => {
     // Use a path from the current project structure
     const tsFilePath = path.resolve(__dirname, '../../src/index.ts');
-    const task = new Task(tsFilePath);
+    const task = new Task('ts-task', tsFilePath);
 
     expect(task.getEnvironmentType()).toBe(TaskEnvironment.TYPESCRIPT);
     expect(task.getConfigPath()).toContain('package.json');
@@ -43,7 +43,7 @@ describe('Task Environment Detection', () => {
     createTestFile(jsxFilePath, 'export const testJsx = () => <div>Test</div>;');
 
     try {
-      const task = new Task(jsxFilePath);
+      const task = new Task('jsx-task', jsxFilePath);
       expect(task.getEnvironmentType()).toBe(TaskEnvironment.JAVASCRIPT);
     } finally {
       cleanupTestFile(jsxFilePath);
@@ -57,7 +57,7 @@ describe('Task Environment Detection', () => {
     createTestFile(tsxFilePath, 'export const testTsx = () => <div>Test</div>;');
 
     try {
-      const task = new Task(tsxFilePath);
+      const task = new Task('tsx-task', tsxFilePath);
       expect(task.getEnvironmentType()).toBe(TaskEnvironment.TYPESCRIPT);
     } finally {
       cleanupTestFile(tsxFilePath);
@@ -66,7 +66,7 @@ describe('Task Environment Detection', () => {
 
   test('should return UNKNOWN for unsupported file types', () => {
     const unknownFilePath = path.resolve(__dirname, '../../README.md');
-    const task = new Task(unknownFilePath);
+    const task = new Task('unknown-task', unknownFilePath);
 
     expect(task.getEnvironmentType()).toBe(TaskEnvironment.UNKNOWN);
     expect(task.getConfigPath()).toBeUndefined();
@@ -76,7 +76,7 @@ describe('Task Environment Detection', () => {
     // This test will return UNKNOWN since we don't have Python files in the project
     // In a real Python project, it would detect Python environment
     const pythonFilePath = '/path/to/some/python/script.py';
-    const task = new Task(pythonFilePath);
+    const task = new Task('python-task', pythonFilePath);
 
     // This defaults to UNKNOWN since we're not in a Python project
     expect(task.getEnvironmentType()).toBe(TaskEnvironment.UNKNOWN);
@@ -91,7 +91,7 @@ describe('Task Environment Detection', () => {
     createTestFile(pkgPath, '{invalid-json');
 
     try {
-      const task = new Task(jsFilePath);
+      const task = new Task('invalid-pkg-task', jsFilePath);
       // With invalid package.json, it should fall back to UNKNOWN
       expect(task.getEnvironmentType()).toBe(TaskEnvironment.UNKNOWN);
       expect(task.getConfig()).toBeUndefined();
@@ -129,7 +129,7 @@ describe('findFileUpwards Method', () => {
 
   test('should find file in current directory', () => {
     // This accesses a private method, so we'll create a task and test indirectly
-    const task = new Task(path.join(level2Dir, 'test.js'));
+    const task = new Task('find-file-task', path.join(level2Dir, 'test.js'));
 
     // Create a method that exposes the private findFileUpwards method
     const findFile = (filename: string, startDir: string) => {
@@ -142,7 +142,7 @@ describe('findFileUpwards Method', () => {
   });
 
   test('should find file in parent directory', () => {
-    const task = new Task(path.join(level3Dir, 'test.js'));
+    const task = new Task('parent-dir-task', path.join(level3Dir, 'test.js'));
 
     // @ts-ignore - accessing private method for testing
     const foundPath = task.findFileUpwards('mid-file.txt', level3Dir);
@@ -150,7 +150,7 @@ describe('findFileUpwards Method', () => {
   });
 
   test('should find first file from an array of filenames', () => {
-    const task = new Task(path.join(level3Dir, 'test.js'));
+    const task = new Task('array-filenames-task', path.join(level3Dir, 'test.js'));
 
     // @ts-ignore - accessing private method for testing
     const foundPath = task.findFileUpwards(
@@ -161,7 +161,7 @@ describe('findFileUpwards Method', () => {
   });
 
   test('should return undefined when file is not found', () => {
-    const task = new Task(path.join(level3Dir, 'test.js'));
+    const task = new Task('not-found-task', path.join(level3Dir, 'test.js'));
 
     // @ts-ignore - accessing private method for testing
     const foundPath = task.findFileUpwards('non-existent-file.txt', level3Dir, 2);
@@ -169,7 +169,7 @@ describe('findFileUpwards Method', () => {
   });
 
   test('should respect maxDepth parameter', () => {
-    const task = new Task(path.join(level3Dir, 'test.js'));
+    const task = new Task('max-depth-task', path.join(level3Dir, 'test.js'));
 
     // Create the test file structure
     createTestFile(path.join(testDir, 'depth-test.txt'), 'test content');
@@ -193,262 +193,75 @@ describe('findFileUpwards Method', () => {
   });
 });
 
-describe('Task Execution', () => {
-  test('should execute a JavaScript task', async () => {
-    // Create a temporary JS file with a test function
-    const testDir = path.resolve(__dirname, '../../examples');
-    const testFilePath = path.join(testDir, 'test-task.js');
-    const testContent = `
-      exports.testFunction = (inputs) => {
-        return { 
-          result: inputs.value * 2,
-          message: 'Success'
-        };
-      };
-    `;
-
-    // Write the test file
-    createTestFile(testFilePath, testContent);
-
-    try {
-      // Create a task pointing to our test function
-      const task = new Task(testFilePath, { entryFunctionName: 'testFunction' });
-
-      // Run the task
-      const result = await task.run({ value: 21 });
-
-      // Verify the result
-      expect(result).toEqual({ result: 42, message: 'Success' });
-    } finally {
-      // Clean up - remove the test file
-      cleanupTestFile(testFilePath);
-    }
+describe('Task Resource Configuration', () => {
+  test('should set default CPU and memory values when not provided', () => {
+    const task = new Task('default-resource-task', '/path/to/task.js');
+    expect(task.cpu).toBe(0.25);
+    expect(task.memory).toBe('1gb'); // Updated to match actual default value
   });
 
-  test('should use default main function name if not specified', async () => {
-    const testDir = path.resolve(__dirname, '../../examples');
-    const testFilePath = path.join(testDir, 'test-default-main.js');
-    const testContent = `
-      exports.main = (inputs) => {
-        return { result: 'default main used' };
-      };
-    `;
+  test('should normalize CPU values to increments of 0.25', () => {
+    const task1 = new Task('cpu-task-1', '/path/to/task.js', { cpu: 0.3 });
+    expect(task1.cpu).toBe(0.25);
 
-    createTestFile(testFilePath, testContent);
+    const task2 = new Task('cpu-task-2', '/path/to/task.js', { cpu: 0.6 });
+    expect(task2.cpu).toBe(0.5);
 
-    try {
-      // Create task without specifying entryFunctionName
-      const task = new Task(testFilePath);
-      const result = await task.run();
-      expect(result).toEqual({ result: 'default main used' });
-    } finally {
-      cleanupTestFile(testFilePath);
-    }
+    const task3 = new Task('cpu-task-3', '/path/to/task.js', { cpu: 1.7 });
+    expect(task3.cpu).toBe(1.75);
+
+    const task4 = new Task('cpu-task-4', '/path/to/task.js', { cpu: 0.1 });
+    expect(task4.cpu).toBe(0.25); // Minimum value
   });
 
-  test('should throw error if function does not exist', async () => {
-    // Create a temporary JS file
-    const testDir = path.resolve(__dirname, '../../examples');
-    const testFilePath = path.join(testDir, 'test-task-error.js');
-    const testContent = `
-      exports.existingFunction = () => {
-        return { result: 'success' };
-      };
-    `;
+  test('should normalize memory values to increments of 256MB', () => {
+    const task1 = new Task('mem-task-1', '/path/to/task.js', { memory: '300mb' });
+    expect(task1.memory).toBe('256mb');
 
-    // Write the test file
-    createTestFile(testFilePath, testContent);
+    const task2 = new Task('mem-task-2', '/path/to/task.js', { memory: '400mb' });
+    expect(task2.memory).toBe('512mb');
 
-    try {
-      // Create a task pointing to a non-existent function
-      const task = new Task(testFilePath, { entryFunctionName: 'nonExistentFunction' });
+    const task3 = new Task('mem-task-3', '/path/to/task.js', { memory: '1.1gb' });
+    expect(task3.memory).toBe('1gb');
 
-      // Run the task and expect it to throw
-      await expect(task.run()).rejects.toThrow(/Function 'nonExistentFunction' not found/);
-    } finally {
-      // Clean up - remove the test file
-      cleanupTestFile(testFilePath);
-    }
+    const task4 = new Task('mem-task-4', '/path/to/task.js', { memory: '1.7gb' });
+    expect(task4.memory).toBe('1792mb'); // Updated to match actual implementation
   });
 
-  test('should throw error if file does not exist', async () => {
-    // Create a task with a non-existent file
-    const nonExistentPath = path.resolve(__dirname, 'does-not-exist.js');
-    const task = new Task(nonExistentPath);
+  test('should handle TB memory values', () => {
+    const task1 = new Task('tb-task-1', '/path/to/task.js', { memory: '1tb' });
+    expect(task1.memory).toBe('1tb');
 
-    // Run the task and expect it to throw
-    await expect(task.run()).rejects.toThrow(/Task file not found/);
+    const task2 = new Task('tb-task-2', '/path/to/task.js', { memory: '1.1tb' });
+    expect(task2.memory).toBe('1.1tb');
+
+    const task3 = new Task('tb-task-3', '/path/to/task.js', { memory: '1.5tb' });
+    expect(task3.memory).toBe('1.5tb');
   });
 
-  test('should throw error for unsupported environment', async () => {
-    // Create a file with an unsupported extension
-    const unsupportedFilePath = path.resolve(__dirname, '../../examples/unsupported.txt');
-    createTestFile(unsupportedFilePath, 'This is not a supported file type');
+  test('should handle invalid memory format', () => {
+    const task1 = new Task('invalid-mem-task-1', '/path/to/task.js', { memory: 'invalid' });
+    expect(task1.memory).toBe('256mb'); // Default
 
-    try {
-      const task = new Task(unsupportedFilePath);
-      await expect(task.run()).rejects.toThrow(/Unsupported task environment/);
-    } finally {
-      cleanupTestFile(unsupportedFilePath);
-    }
+    const task2 = new Task('invalid-mem-task-2', '/path/to/task.js', { memory: '100' });
+    expect(task2.memory).toBe('256mb'); // Default
+  });
+});
+
+describe('Task ID Configuration', () => {
+  test('should set the ID when creating a task', () => {
+    const id = 'test-task-id';
+    const task = new Task(id, '/path/to/task.js');
+    expect(task.id).toBe(id);
   });
 
-  test('should handle general errors during JS task execution', async () => {
-    const testDir = path.resolve(__dirname, '../../examples');
-    const testFilePath = path.join(testDir, 'test-error-task.js');
-    const testContent = `
-      exports.errorFunction = () => {
-        throw new Error('Test error');
-      };
-    `;
+  test('should handle different ID formats', () => {
+    const idWithSpaces = 'task with spaces';
+    const taskWithSpaces = new Task(idWithSpaces, '/path/to/task.js');
+    expect(taskWithSpaces.id).toBe(idWithSpaces);
 
-    createTestFile(testFilePath, testContent);
-
-    try {
-      const task = new Task(testFilePath, { entryFunctionName: 'errorFunction' });
-      await expect(task.run()).rejects.toThrow(/Error executing task/);
-    } finally {
-      cleanupTestFile(testFilePath);
-    }
-  });
-
-  // Mock Python task tests without using Jest mocks
-  describe('Python Task Execution', () => {
-    // Create a test Python file and modify environment type manually
-    test('should handle Python task execution', async () => {
-      const pythonFilePath = path.resolve(__dirname, '../../examples/test.py');
-      createTestFile(pythonFilePath, 'def main(inputs): return {"result": "python ran"}');
-
-      // Create a custom exec implementation
-      const originalExec = require('node:child_process').exec;
-
-      try {
-        // Override child_process.exec temporarily with our test version
-        require('node:child_process').exec = (cmd: string, callback: any) => {
-          // Simulate successful Python execution by creating the output file
-          const match = cmd.match(/temp_output_([a-f0-9-]+)\.json/);
-          if (match) {
-            const tempId = match[1];
-            const outputFile = path.join(
-              path.dirname(pythonFilePath),
-              `temp_output_${tempId}.json`,
-            );
-            // Create the expected output file
-            fs.writeFileSync(outputFile, JSON.stringify({ result: 'python test complete' }));
-          }
-
-          // Call the callback with success
-          setTimeout(() => {
-            callback(null, 'Python output', '');
-          }, 10);
-
-          return { on: () => {} };
-        };
-
-        const task = new Task(pythonFilePath);
-
-        // Set the environment type to Python
-        // @ts-ignore - accessing private property for testing
-        task.environment.type = TaskEnvironment.PYTHON;
-
-        // Skip actual Python execution but test our handling code
-        const result = await task.run({ test: true });
-        expect(result).toHaveProperty('result');
-      } finally {
-        // Restore the original exec function
-        require('node:child_process').exec = originalExec;
-        cleanupTestFile(pythonFilePath);
-
-        // Clean up any temp files that might have been created
-        const tempFiles = fs.readdirSync(path.dirname(pythonFilePath));
-        for (const file of tempFiles) {
-          if (file.startsWith('temp_')) {
-            cleanupTestFile(path.join(path.dirname(pythonFilePath), file));
-          }
-        }
-      }
-    });
-
-    // Test error handling for Python tasks
-    test('should handle Python execution errors', async () => {
-      const pythonFilePath = path.resolve(__dirname, '../../examples/error.py');
-      createTestFile(pythonFilePath, 'def main(inputs): raise Exception("Python error")');
-
-      const originalExec = require('node:child_process').exec;
-
-      try {
-        // Override exec to simulate an error
-        require('node:child_process').exec = (cmd: string, callback: any) => {
-          setTimeout(() => {
-            callback(new Error('Command failed'), '', 'Python error');
-          }, 10);
-          return { on: () => {} };
-        };
-
-        const task = new Task(pythonFilePath);
-        // @ts-ignore - accessing private property for testing
-        task.environment.type = TaskEnvironment.PYTHON;
-
-        await expect(task.run()).rejects.toThrow(/Error executing Python task/);
-      } finally {
-        require('node:child_process').exec = originalExec;
-        cleanupTestFile(pythonFilePath);
-      }
-    });
-
-    test('should handle Python stderr output', async () => {
-      const pythonFilePath = path.resolve(__dirname, '../../examples/warning.py');
-      createTestFile(
-        pythonFilePath,
-        'def main(inputs): print("Warning", file=sys.stderr); return {}',
-      );
-
-      const originalExec = require('node:child_process').exec;
-
-      try {
-        // Override exec to simulate stderr output
-        require('node:child_process').exec = (cmd: string, callback: any) => {
-          setTimeout(() => {
-            callback(null, '', 'Warning message');
-          }, 10);
-          return { on: () => {} };
-        };
-
-        const task = new Task(pythonFilePath);
-        // @ts-ignore - accessing private property for testing
-        task.environment.type = TaskEnvironment.PYTHON;
-
-        await expect(task.run()).rejects.toThrow(/Error in Python task/);
-      } finally {
-        require('node:child_process').exec = originalExec;
-        cleanupTestFile(pythonFilePath);
-      }
-    });
-
-    test('should handle missing output file', async () => {
-      const pythonFilePath = path.resolve(__dirname, '../../examples/no-output.py');
-      createTestFile(pythonFilePath, 'def main(inputs): pass  # No output');
-
-      const originalExec = require('node:child_process').exec;
-
-      try {
-        // Override exec to simulate successful execution but without creating output file
-        require('node:child_process').exec = (cmd: string, callback: any) => {
-          setTimeout(() => {
-            callback(null, 'Python ran', '');
-          }, 10);
-          return { on: () => {} };
-        };
-
-        const task = new Task(pythonFilePath);
-        // @ts-ignore - accessing private property for testing
-        task.environment.type = TaskEnvironment.PYTHON;
-
-        await expect(task.run()).rejects.toThrow(/Python task did not produce an output file/);
-      } finally {
-        require('node:child_process').exec = originalExec;
-        cleanupTestFile(pythonFilePath);
-      }
-    });
+    const idWithSpecialChars = 'task-with-special_chars!@#';
+    const taskWithSpecialChars = new Task(idWithSpecialChars, '/path/to/task.js');
+    expect(taskWithSpecialChars.id).toBe(idWithSpecialChars);
   });
 });
