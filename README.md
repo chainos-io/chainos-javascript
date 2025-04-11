@@ -133,6 +133,29 @@ const json = chain.compile();
 Tasks can have preprocessing and postprocessing steps:
 
 ```typescript
+// Define tasks that share the same implementation file but with different entry functions
+const dataTask = new Task(
+  'data-processor',
+  path.resolve(__dirname, './tasks/data-processor.js'),
+  {
+    displayName: 'Data Processor',
+    entryFunctionName: 'processData',
+    cpu: 0.5,
+    memory: '1gb',
+  }
+);
+
+const validationTask = new Task(
+  'data-validator',
+  path.resolve(__dirname, './tasks/data-processor.js'),
+  {
+    displayName: 'Data Validator',
+    entryFunctionName: 'validateData',
+    cpu: 0.25,
+    memory: '512mb',
+  }
+);
+
 chain.register({
   id: 'data-step',
   task: dataTask,
