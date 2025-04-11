@@ -105,17 +105,22 @@ chain.register({
 chain.register({
   id: 'step-2',
   task: task2,
-  preprocessing: preprocessingTask, // Optional task to run before the main task
-  postprocessing: (result) => {     // Optional function to process the result
-    return { processed: result };
-  }
 });
+
+chain.register({
+  id: 'step-3',
+  task: task3,
+  targers: ['step-4']
+});
+
+chain.register({
+  id: 'step-4',
+  task: task4,
+});
+
 
 // Set the entry point
 chain.setEntryPoint('step-1');
-
-// Materialize functions into executable files
-chain.materializeProcessingFunctions();
 
 // Compile the chain to a JSON representation
 const json = chain.compile();
