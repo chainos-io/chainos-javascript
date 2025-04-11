@@ -1,7 +1,6 @@
 import axios, { type AxiosInstance } from 'axios';
 import { type ChainosConfig, defaultConfig } from '../config';
 import { ChainosError } from '../utils/errors';
-import { WorkflowsApi } from './workflows';
 
 /**
  * The main client for interacting with the Chainos API
@@ -13,7 +12,6 @@ export class ChainosClient {
   /**
    * API methods for working with workflows
    */
-  public readonly workflows: WorkflowsApi;
 
   /**
    * Create a new ChainosClient instance
@@ -27,7 +25,7 @@ export class ChainosClient {
       baseURL: this.config.baseUrl,
       headers: {
         'Content-Type': 'application/json',
-        'User-Agent': `chainos-sdk-js/0.1.0`,
+        'User-Agent': 'chainos-sdk-js/0.1.0',
       },
       timeout: this.config.timeout || 30000,
     });
@@ -35,13 +33,12 @@ export class ChainosClient {
     // Add request interceptor for authentication
     this.apiClient.interceptors.request.use(async (config) => {
       if (this.config.apiKey) {
-        config.headers['Authorization'] = `Bearer ${this.config.apiKey}`;
+        config.headers.Authorization = `Bearer ${this.config.apiKey}`;
       }
       return config;
     });
 
     // Initialize API resources
-    this.workflows = new WorkflowsApi(this);
   }
 
   /**

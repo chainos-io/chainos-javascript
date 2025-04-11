@@ -1,0 +1,19 @@
+{
+  "name": "chainos-typescript-logger",
+  "version": "1.0.0",
+  "description": "TypeScript logger task for Chainos workflows that logs in yellow color",
+  "main": "dist/index.js",
+  "scripts": {
+    "build": "tsc",
+    "start": "ts-node src/index.ts",
+    "test": "jest"
+  },
+  "dependencies": {
+    "chalk": "^4.1.2"
+  },
+  "devDependencies": {
+    "@types/node": "^18.15.11",
+    "ts-node": "^10.9.1",
+    "typescript": "^5.0.4"
+  }
+}

@@ -1,0 +1,2 @@
+# Python Logger Task dependencies
+loguru>=0.7.0

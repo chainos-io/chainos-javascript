@@ -2,12 +2,7 @@
   "name": "chainos-sdk",
   "version": "0.1.0",
   "description": "TypeScript SDK for Chainos workflow tool",
-  "main": "dist/index.js",
-  "types": "dist/index.d.ts",
-  "files": ["dist"],
   "repository": "https://github.com/chainos-io/chainos-javascript.git",
-  "author": "csark0812 <chris@getgreco.app>",
-  "license": "MIT",
   "scripts": {
     "build": "tsc",
     "clean": "rimraf dist",

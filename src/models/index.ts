@@ -5,3 +5,4 @@
 export * from './chain';
 export * from './types';
 export * from './task';
+export * from './errors';
