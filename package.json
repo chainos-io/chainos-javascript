@@ -1,6 +1,6 @@
 {
   "name": "chainos",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "TypeScript SDK for Chainos workflow tool",
   "repository": "https://github.com/chainos-io/chainos-javascript.git",
   "main": "dist/index.js",
