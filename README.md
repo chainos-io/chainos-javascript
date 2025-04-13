@@ -8,10 +8,10 @@ Install the SDK using your preferred package manager:
 
 ```bash
 # Using npm
-npm install chainos-sdk
+npm install chainos
 
 # Using Yarn
-yarn add chainos-sdk
+yarn add chainos
 ```
 
 ## Quick Start
@@ -19,7 +19,7 @@ yarn add chainos-sdk
 ### Creating a Workflow Chain
 
 ```typescript
-import { Chain, Task } from 'chainos-sdk';
+import { Chain, Task } from 'chainos';
 import path from 'node:path';
 
 // Create tasks
@@ -205,7 +205,7 @@ console.log(pyTask.getEnvironmentType()); // PYTHON
 The SDK provides custom error classes for different error scenarios:
 
 ```typescript
-import { SoftError, FatalError } from 'chainos-sdk';
+import { SoftError, FatalError } from 'chainos';
 
 function validateInput(data) {
   if (!data) {

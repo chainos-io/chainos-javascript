@@ -81,7 +81,7 @@ describe('Task Environment Detection', () => {
 
     expect(task.getEnvironmentType()).toBe(TaskEnvironment.JAVASCRIPT);
     expect(task.getConfigPath()).toContain('package.json');
-    expect(task.getConfig()).toHaveProperty('name', 'chainos-sdk');
+    expect(task.getConfig()).toHaveProperty('name', 'chainos');
   });
 
   test('should detect TypeScript environment from .ts file', () => {
@@ -91,7 +91,7 @@ describe('Task Environment Detection', () => {
 
     expect(task.getEnvironmentType()).toBe(TaskEnvironment.TYPESCRIPT);
     expect(task.getConfigPath()).toContain('package.json');
-    expect(task.getConfig()).toHaveProperty('name', 'chainos-sdk');
+    expect(task.getConfig()).toHaveProperty('name', 'chainos');
   });
 
   test('should detect JavaScript environment from .jsx file', () => {
